@@ -1,16 +1,14 @@
 import instaloader
-import pandas as pd
-import matplotlib.pyplot as plt
-from datetime import datetime
-import time
 import random
-import math
+import time
+import pandas as pd
+from datetime import datetime
 
 # Initialize Instaloader
 L = instaloader.Instaloader()
 
 # Function to fetch posts from an Instagram profile within a date range
-def fetch_instagram_posts(username, start_date, end_date, max_posts=10):
+def fetch_instagram_posts(username, start_date, end_date):
     try:
         # Load profile
         profile = instaloader.Profile.from_username(L.context, username)
@@ -20,72 +18,50 @@ def fetch_instagram_posts(username, start_date, end_date, max_posts=10):
         start_date = datetime.strptime(start_date, "%Y-%m-%d")
         end_date = datetime.strptime(end_date, "%Y-%m-%d")
 
-        # Get total number of posts for progress bar
-        total_posts = sum(1 for post in profile.get_posts())  # Count total posts for percentage tracking
-        print(f"Total posts to fetch: {total_posts}")
+        # Introduce some randomization in the requests
+        retry_attempts = 10  # Increase the retry attempts for robustness
+        backoff_time = 30  # Initial backoff time in seconds
 
-        # Get followers at the start date
-        start_followers = profile.followers
-
-        # Iterate through posts
-        fetched_posts = 0
-        retries = 0
-        max_retries = 5  # Max retries before failing
-        retry_delay_base = 30  # Base time to wait before retry (in seconds)
-
-        for post in profile.get_posts():
+        for attempt in range(retry_attempts):
             try:
-                post_date = post.date
-                if start_date <= post_date <= end_date:
-                    posts_data.append({
-                        "Date": post_date,
-                        "Likes": post.likes,
-                        "Comments": post.comments,
-                        "Caption": post.caption[:50] if post.caption else "No caption",  # Truncate for brevity
-                        "URL": post.shortcode
-                    })
+                # Iterate through posts
+                for post in profile.get_posts():
+                    post_date = post.date
+                    if start_date <= post_date <= end_date:
+                        posts_data.append({
+                            "Date": post_date,
+                            "Likes": post.likes,
+                            "Comments": post.comments,
+                            "Caption": post.caption[:50] if post.caption else "No caption",  # Truncate for brevity
+                            "URL": post.shortcode
+                        })
+                    
+                    # Stop if we've gone past the start date (posts are in reverse chronological order)
+                    if post_date < start_date:
+                        break
 
-                # Update progress bar
-                fetched_posts += 1
-                percentage = (fetched_posts / total_posts) * 100
-                print(f"Loading... {math.ceil(percentage)}% complete", end='\r')
-
-                # Stop fetching after reaching the max_posts limit
-                if fetched_posts >= max_posts:
+                # If posts are fetched successfully, break out of retry loop
+                if posts_data:
                     break
-
-                # Add a random delay between 10 minutes to 1 hour to mimic organic browsing
-                delay_time = random.uniform(600, 3600)  # Random delay between 10 minutes and 1 hour
-                print(f"\nSleeping for {delay_time:.2f} seconds...")
-                time.sleep(delay_time)
 
             except Exception as e:
-                # Handle rate limits and temporary blocks
-                print(f"\nError fetching post: {e}")
-                if retries < max_retries:
-                    retries += 1
-                    retry_delay = retry_delay_base * (2 ** retries) + random.randint(5, 15)  # Exponential backoff
-                    print(f"Retrying in {retry_delay} seconds... (Retry #{retries})")
-                    time.sleep(retry_delay)
-                    continue
+                print(f"Error in attempt {attempt + 1}: {e}")
+                if attempt < retry_attempts - 1:
+                    # Exponential backoff with randomization
+                    wait_time = random.randint(backoff_time, backoff_time + 90)  # 30 to 90 seconds
+                    print(f"Retrying in {wait_time} seconds...")
+                    time.sleep(wait_time)
+                    # Double the backoff time after each failure to make the retries slower
+                    backoff_time = random.randint(60, 180)  # randomize further
                 else:
                     print("Max retries reached. Exiting.")
-                    break
+                    return []
 
-        print("\nFetch completed.")
-
-        # Get followers at the end date
-        end_followers = profile.followers
-
-        # Calculate follower growth
-        follower_growth = end_followers - start_followers
-        print(f"Follower Growth: {follower_growth} followers (Start: {start_followers}, End: {end_followers})")
-
-        return posts_data, start_followers, end_followers, follower_growth
+        return posts_data
 
     except Exception as e:
         print(f"Error fetching posts: {e}")
-        return [], None, None, None
+        return []
 
 # Function to calculate engagement metrics
 def calculate_engagement(posts_data):
@@ -97,10 +73,10 @@ def calculate_engagement(posts_data):
     # Calculate total engagement (Likes + Comments)
     df["Engagement"] = df["Likes"] + df["Comments"]
     
-    # Engagement rate (assuming followers count is needed; here we'll estimate or fetch if possible)
-    profile = instaloader.Profile.from_username(L.context, "wubwagon")  # Modify username if needed
-    followers = profile.followers
-    df["Engagement_Rate"] = df["Engagement"] / followers * 100  # Percentage
+    # Estimate followers count (this is where you may need to add a real follower count fetch)
+    profile = instaloader.Profile.from_username(L.context, "wubwagon")
+    followers = profile.followers  # Assuming you have access to the followers count
+    df["Engagement_Rate"] = df["Engagement"] / followers * 100  # Engagement rate as a percentage
 
     return df
 
@@ -143,18 +119,11 @@ def plot_engagement_charts(df, start_date, end_date):
     plt.tight_layout()
     plt.show()
 
-# Function to export the data to an Excel file
-def export_to_excel(df, start_date, end_date):
-    filename = f"instagram_analytics_{start_date}_to_{end_date}.xlsx"
-    df.to_excel(filename, index=False, engine='xlsxwriter')
-    print(f"Data exported to {filename}")
-
 # Main function to run the analysis
 def main():
-    # User input for Instagram username and date range
+    # User input for username and date range
     print("Enter Instagram Username (without @): ")
     username = input().strip()
-    
     print("Enter the date range for analysis (format: YYYY-MM-DD)")
     start_date = input("Start Date: ")
     end_date = input("End Date: ")
@@ -167,9 +136,9 @@ def main():
         print("Invalid date format. Please use YYYY-MM-DD.")
         return
 
-    # Fetch posts and follower data
+    # Fetch posts
     print(f"Fetching posts for @{username} from {start_date} to {end_date}...")
-    posts_data, start_followers, end_followers, follower_growth = fetch_instagram_posts(username, start_date, end_date, max_posts=10)
+    posts_data = fetch_instagram_posts(username, start_date, end_date)
 
     # Calculate engagement
     df = calculate_engagement(posts_data)
@@ -179,12 +148,6 @@ def main():
 
         # Plot charts
         plot_engagement_charts(df, start_date, end_date)
-
-        # Export to Excel
-        export_to_excel(df, start_date, end_date)
-
-        # Display follower growth
-        print(f"\nFollower Growth: {follower_growth} followers (Start: {start_followers}, End: {end_followers})")
 
 if __name__ == "__main__":
     main()
