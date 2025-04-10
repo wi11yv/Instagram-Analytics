@@ -1,36 +1,37 @@
-const OPENAI_API_KEY = "your-openai-api-key-here"; // Replace with your key
+const OPENAI_API_KEY = "your-api-key-here"; // Replace with your real key
 
 function generateSocialMediaPosts() {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
   const data = sheet.getDataRange().getValues();
 
   const headers = data[0];
-  const socialPostColIndex = headers.indexOf("Social Media Post");
+  const descriptionColIndex = headers.indexOf("Description"); // assuming D column
+  const postColIndex = headers.indexOf("Post");
 
-  if (socialPostColIndex === -1) {
-    throw new Error('Missing "Social Media Post" column');
+  if (descriptionColIndex === -1 || postColIndex === -1) {
+    throw new Error('Missing "Description" or "Post" column');
   }
 
   for (let i = 1; i < data.length; i++) {
     const row = data[i];
-    const product = row[0];
-    const price = row[1];
-    const description = row[2];
+    const description = row[descriptionColIndex];
 
-    if (row[socialPostColIndex]) continue; // Skip if already filled
+    // Skip if there's no description or post already exists
+    if (!description || row[postColIndex]) continue;
 
     const prompt = `
-Create a short, catchy social media post promoting this product:
+You are a witty and versatile social media marketer. Write a unique, engaging, and promotional social media post based solely on the following product description:
 
-Product: ${product}
-Price: ${price}
-Description: ${description}
+"${description}"
 
-Make it friendly and engaging.`;
+Vary the tone and structure from post to post. Make it appealing, friendly, and scroll-stopping. The post should clearly promote the product and encourage viewers to visit the shop or product link to order. Feel free to use a call to action like "Shop now", "Grab yours here", or "Don't miss out".
+
+Do not mention 'product description' or explain what you're doing — just write the actual post.
+`;
 
     const post = callChatGPT(prompt);
     if (post) {
-      sheet.getRange(i + 1, socialPostColIndex + 1).setValue(post);
+      sheet.getRange(i + 1, postColIndex + 1).setValue(post);
     }
   }
 }
@@ -41,11 +42,11 @@ function callChatGPT(prompt) {
   const payload = {
     model: "gpt-3.5-turbo",
     messages: [
-      { role: "system", content: "You are a creative social media manager." },
+      { role: "system", content: "You are a creative and persuasive social media copywriter." },
       { role: "user", content: prompt },
     ],
-    max_tokens: 100,
-    temperature: 0.8,
+    max_tokens: 150,
+    temperature: 0.9,
   };
 
   const options = {
