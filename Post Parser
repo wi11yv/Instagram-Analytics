@@ -1,71 +1,203 @@
-const OPENAI_API_KEY = "your-api-key-here"; // Replace with your real key
+const OPENAI_API_KEY = 'YOURKEYHERE'; // Replace with your actual API key
 
-function generateSocialMediaPosts() {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-  const data = sheet.getDataRange().getValues();
+// Complete Tone and Emoji configurations
+const toneStyles = [
+  { name: "Artsy and experimental", voice: "Abstract, expressive, layered", emojiBias: ["🎨", "🧵", "🖌️", "🧷", "🧊"] },
+  { name: "Corporate and professional", voice: "Clean, trustworthy, informative", emojiBias: ["📊", "📈", "📎", "💼", "🧾"] },
+  { name: "Inspirational and empowering", voice: "Uplifting, motivating, strong", emojiBias: ["💪", "🌟", "🚀", "🙌", "🕊️"] },
+  { name: "Gaming and nerd culture", voice: "Bold, referential, playful", emojiBias: ["🎮", "🕹️", "🎲", "🧙", "👾"] },
+  { name: "Crypto/Web3", voice: "Innovative, digital, decentralized", emojiBias: ["🪙", "💻", "🧠", "📡", "⛓️"] },
+  { name: "Productivity-focused", voice: "Efficient, clear, motivating", emojiBias: ["✅", "📅", "⏱️", "📌", "📓"] },
+  { name: "Handmade/boho aesthetic", voice: "Earthy, warm, cozy", emojiBias: ["🧶", "🪡", "🌻", "🪴", "🪵"] },
+  { name: "Grunge/underground", voice: "Raw, gritty, dark", emojiBias: ["🖤", "💀", "🧷", "🩸", "⛓️"] },
+  { name: "Luxury tech", voice: "Minimal, refined, futuristic", emojiBias: ["🖲️", "💽", "💾", "💡", "📀"] },
+  { name: "Nature and organic", voice: "Fresh, grounded, eco-friendly", emojiBias: ["🌿", "🍃", "🌱", "🌻", "🌼"] },
+  { name: "Cottagecore", voice: "Whimsical, vintage, cozy", emojiBias: ["🍄", "🌼", "🧺", "🧵", "📚"] },
+  { name: "Sports and activewear", voice: "Energetic, powerful, competitive", emojiBias: ["🏋️", "🏃", "🎽", "🎯", "🥇"] },
+  { name: "Wellness and calm", voice: "Soothing, supportive, healing", emojiBias: ["🧘", "💧", "🌊", "🕯️"] },
+  { name: "Spiritual and metaphysical", voice: "Sacred, mystical, grounded", emojiBias: ["🔮", "🧿", "🕉️", "💫", "☯️"] },
+  { name: "Experimental tech/art", voice: "Avant-garde, AI-driven, surreal", emojiBias: ["🧬", "🖼️", "🤖", "🧠", "🛠️"] },
+  { name: "Streetwear and urban", voice: "Cool, modern, expressive", emojiBias: ["🧢", "👟", "🎧", "💣", "🚧"] },
+  { name: "Futuristic/scifi", voice: "Otherworldly, sleek, high-tech", emojiBias: ["🪐", "👾", "📡", "⚡", "🤖"] },
+  { name: "Retro/vintage media", voice: "Nostalgic, analog, bold", emojiBias: ["📼", "📻", "🧿", "📺", "🪩"] },
+  { name: "Playful and humorous", voice: "Funny, quirky, engaging", emojiBias: ["😜", "🤣", "🎭", "🐸", "🍕"] },
+  { name: "Travel and adventure", voice: "Exciting, curious, explorative", emojiBias: ["🌍", "🗺️", "🧳", "✈️", "🏝️"] },
+  { name: "Foodie and culinary", voice: "Delicious, enticing, flavorful", emojiBias: ["🍔", "🍣", "🍰", "🍷", "🌮"] },
+  { name: "Fashion-forward", voice: "Stylish, trendy, chic", emojiBias: ["👗", "👜", "👠", "💄", "🕶️"] },
+  { name: "Eco-conscious and sustainable", voice: "Green, responsible, thoughtful", emojiBias: ["🌍", "♻️", "🌳", "🐝", "🌱"] },
+  { name: "Educational and insightful", voice: "Informative, engaging, thoughtful", emojiBias: ["📚", "🎓", "🧠", "📖", "💡"] },
+  { name: "Music and entertainment", voice: "Lively, rhythmic, vibrant", emojiBias: ["🎸", "🎤", "🎧", "🎼", "🥁"] },
+  { name: "Artistic and poetic", voice: "Lyrical, vivid, symbolic", emojiBias: ["🖋️", "🖌️", "📖", "🎭", "🌹"] },
+  { name: "Health and fitness", voice: "Motivational, energetic, active", emojiBias: ["🏋️", "🥦", "💪", "🥗", "🏃"] },
+  { name: "Minimalist and serene", voice: "Simple, clear, calming", emojiBias: ["🕊️", "🌾", "🏞️", "🔹"] },
+  { name: "Bold and rebellious", voice: "Edgy, daring, confident", emojiBias: ["⚡", "🔥", "😈", "🎯", "🖤"] },
+  { name: "Sophisticated and refined", voice: "Polished, cultured, tasteful", emojiBias: ["🥂", "🖋️", "🕰️", "📜", "🎩"] },
+  { name: "Whimsical and fantastical", voice: "Imaginative, dreamy, magical", emojiBias: ["🧚", "🦄", "✨", "🌙", "🪄"] },
+  { name: "Punk and anti-establishment", voice: "Rebellious, loud, raw", emojiBias: ["🧨", "🔪", "🧷", "📛", "🩸"] },
+  { name: "Pet lovers", voice: "Adorable, fluffy, wholesome", emojiBias: ["🐶", "🐱", "🐾", "🦴", "🐕"] },
+  { name: "Parenting and family", voice: "Nurturing, real, chaotic", emojiBias: ["🍼", "🧸", "👶", "💞", "🎨"] },
+  { name: "Cozy and homey", voice: "Comforting, peaceful, home-bound", emojiBias: ["🛋️", "🪵", "🫖", "🧣", "🕯️"] },
+  { name: "Dark academia", voice: "Mysterious, intellectual, vintage", emojiBias: ["🕯️", "📚", "🖋️", "🎩", "🕰️"] },
+  { name: "Light academia", voice: "Romantic, bright, classical", emojiBias: ["📜", "🪞", "🌼", "🎻", "📖"] },
+  { name: "Luxury lifestyle", voice: "Glamorous, elite, exclusive", emojiBias: ["💎", "💰", "🥂", "🛥️", "🧴"] },
+  { name: "Comedy and meme", voice: "Silly, snappy, viral", emojiBias: ["😂", "🙃", "😎", "🍑", "🧃"] },
+  { name: "Seasonal/Holidays", voice: "Festive, themed, joyful", emojiBias: ["🎃", "🎄", "🎆", "🦃", "🧧"] },
+  { name: "Y2K and nostalgia", voice: "Flashy, retro, fun", emojiBias: ["📟", "💿", "📸", "✨", "🧃"] },
+  { name: "STEM and innovation", voice: "Technical, forward-thinking, factual", emojiBias: ["🔬", "🧪", "💡", "⚙️", "📈"] }
+];
 
-  const headers = data[0];
-  const descriptionColIndex = headers.indexOf("Description"); // assuming D column
-  const postColIndex = headers.indexOf("Post");
-
-  if (descriptionColIndex === -1 || postColIndex === -1) {
-    throw new Error('Missing "Description" or "Post" column');
-  }
-
-  for (let i = 1; i < data.length; i++) {
-    const row = data[i];
-    const description = row[descriptionColIndex];
-
-    // Skip if there's no description or post already exists
-    if (!description || row[postColIndex]) continue;
-
-    const prompt = `
-You are a witty and versatile social media marketer. Write a unique, engaging, and promotional social media post based solely on the following product description:
-
-"${description}"
-
-Vary the tone and structure from post to post. Make it appealing, friendly, and scroll-stopping. The post should clearly promote the product and encourage viewers to visit the shop or product link to order. Feel free to use a call to action like "Shop now", "Grab yours here", or "Don't miss out".
-
-Do not mention 'product description' or explain what you're doing — just write the actual post.
-`;
-
-    const post = callChatGPT(prompt);
-    if (post) {
-      sheet.getRange(i + 1, postColIndex + 1).setValue(post);
-    }
-  }
+function getRandomToneStyle() {
+  return toneStyles[Math.floor(Math.random() * toneStyles.length)];
 }
 
-function callChatGPT(prompt) {
-  const url = "https://api.openai.com/v1/chat/completions";
+function getRandomEmojis(emojis, count = 2) {
+  return [...emojis].sort(() => 0.5 - Math.random()).slice(0, count).join(" ");
+}
 
+function getRandomFirstLetterRange() {
+  const start = 65 + Math.floor(Math.random() * 24);
+  return `${String.fromCharCode(start)}-${String.fromCharCode(start + 1)}`;
+}
+
+function getRandomWordLength(min = 4, max = 10) {
+  return min + Math.floor(Math.random() * (max - min + 1));
+}
+
+function getRandomSentenceStyles(count) {
+  const styles = ["statement", "question", "exclamation", "call-to-action"];
+  const result = [];
+  for (let i = 0; i < count; i++) {
+    result.push(styles[i % styles.length]);
+  }
+  return result.join(", ");
+}
+
+function callOpenAI(prompt, maxTokens) {
+  const url = 'https://api.openai.com/v1/chat/completions';
   const payload = {
-    model: "gpt-3.5-turbo",
+    model: "gpt-4o",
     messages: [
-      { role: "system", content: "You are a creative and persuasive social media copywriter." },
-      { role: "user", content: prompt },
+      { role: "system", content: "You are a helpful assistant that writes highly varied, concise, creative social media content." },
+      { role: "user", content: prompt }
     ],
-    max_tokens: 150,
     temperature: 0.9,
+    max_tokens: maxTokens
   };
 
   const options = {
-    method: "POST",
+    method: 'post',
+    contentType: 'application/json',
     headers: {
-      Authorization: `Bearer ${OPENAI_API_KEY}`,
-      "Content-Type": "application/json",
+      Authorization: `Bearer ${OPENAI_API_KEY}`
     },
-    payload: JSON.stringify(payload),
-    muteHttpExceptions: true,
+    payload: JSON.stringify(payload)
   };
 
   try {
     const response = UrlFetchApp.fetch(url, options);
-    const result = JSON.parse(response.getContentText());
-
-    return result.choices?.[0]?.message?.content.trim() || "";
+    const json = JSON.parse(response.getContentText());
+    return json.choices[0].message.content.trim();
   } catch (e) {
-    Logger.log("Error fetching from OpenAI: " + e);
-    return "";
+    Logger.log(`OpenAI API error: ${e}`);
+    return null;
+  }
+}
+
+function generateSocialMediaPostsWithAI() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0];
+
+  const indices = ["File Name", "Description", "Product Link", "Folder", "Post"]
+    .reduce((acc, cur) => ({ ...acc, [cur]: headers.indexOf(cur) }), {});
+
+  if (Object.values(indices).includes(-1)) {
+    Logger.log("Missing required columns.");
+    return;
+  }
+
+  const usedIntros = new Set();
+  const toneCount = toneStyles.length;
+
+  for (let i = 1; i < data.length; i++) {
+    const [fileName, description, productLink, folder, existingPost] = [
+      data[i][indices["File Name"]],
+      data[i][indices["Description"]],
+      data[i][indices["Product Link"]],
+      data[i][indices["Folder"]],
+      data[i][indices["Post"]]
+    ];
+
+    if (existingPost || !description || !productLink) continue;
+
+    const toneIndex = (i - 1) % toneCount;
+    const selectedTone = toneStyles[toneIndex];
+    const emojis = getRandomEmojis(selectedTone.emojiBias);
+    const firstLetterRange = getRandomFirstLetterRange();
+    const firstSentenceWordLength = getRandomWordLength(4, 8);
+    const sentenceStyles = getRandomSentenceStyles(2 + Math.floor(Math.random() * 2));
+
+    const prompt = `
+You are a professional social media copywriter.
+
+Write a completely unique, non-repeating, short and creative social media post for a digital product.
+
+Tone: ${selectedTone.name} (${selectedTone.voice})
+
+Context:
+File Name: ${fileName}
+Description: ${description}
+Folder: ${folder}
+Product Link: ${productLink}
+
+Post Format Rules:
+- 1 to 3 short sentences total
+- Under 260 characters
+- Each sentence must be separated by a blank line
+
+- First sentence must start with a unique word that begins with a letter in range [${firstLetterRange}], and should be approximately ${firstSentenceWordLength} characters long
+
+- Use diverse sentence types: ${sentenceStyles}
+- No quotation marks at all
+- No inline links — the product link must go on its own line at the very end
+- Use 1–2 relevant emojis from this list: ${emojis}
+- Include 3 hashtags:
+  • One broad trend
+  • One category-specific
+  • One hyper-niche or creative tag
+
+Only return the post copy. No extra text, markdown, or formatting.
+`;
+
+    let attempt = 0;
+    const maxTokens = 150;
+    while (attempt < 5) {
+      Utilities.sleep(1000);
+      const aiResponse = callOpenAI(prompt, maxTokens);
+      if (!aiResponse) break;
+
+      const firstWord = aiResponse.trim().split(/\s+/)[0];
+      const introKey = firstWord.toLowerCase();
+
+      if (!usedIntros.has(introKey)) {
+        usedIntros.add(introKey);
+        sheet.getRange(i + 1, indices["Post"] + 1).setValue(aiResponse.trim());
+
+        if (headers.indexOf("Prompt") === -1) {
+          sheet.getRange(1, indices["Post"] + 2).setValue("Prompt");
+        }
+        sheet.getRange(i + 1, indices["Post"] + 2).setValue(prompt);
+        break;
+      }
+
+      attempt++;
+      Logger.log(`Duplicate intro detected. Retrying... (Attempt ${attempt})`);
+    }
+
+    if (attempt === 5) {
+      Logger.log("Maximum retries reached; consider expanding prompt diversity.");
+    }
+
+    if ((i + 1) % 10 === 0) SpreadsheetApp.flush();
   }
 }
