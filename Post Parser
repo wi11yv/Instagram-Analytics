@@ -1,0 +1,70 @@
+const OPENAI_API_KEY = "your-openai-api-key-here"; // Replace with your key
+
+function generateSocialMediaPosts() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  const data = sheet.getDataRange().getValues();
+
+  const headers = data[0];
+  const socialPostColIndex = headers.indexOf("Social Media Post");
+
+  if (socialPostColIndex === -1) {
+    throw new Error('Missing "Social Media Post" column');
+  }
+
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    const product = row[0];
+    const price = row[1];
+    const description = row[2];
+
+    if (row[socialPostColIndex]) continue; // Skip if already filled
+
+    const prompt = `
+Create a short, catchy social media post promoting this product:
+
+Product: ${product}
+Price: ${price}
+Description: ${description}
+
+Make it friendly and engaging.`;
+
+    const post = callChatGPT(prompt);
+    if (post) {
+      sheet.getRange(i + 1, socialPostColIndex + 1).setValue(post);
+    }
+  }
+}
+
+function callChatGPT(prompt) {
+  const url = "https://api.openai.com/v1/chat/completions";
+
+  const payload = {
+    model: "gpt-3.5-turbo",
+    messages: [
+      { role: "system", content: "You are a creative social media manager." },
+      { role: "user", content: prompt },
+    ],
+    max_tokens: 100,
+    temperature: 0.8,
+  };
+
+  const options = {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${OPENAI_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    payload: JSON.stringify(payload),
+    muteHttpExceptions: true,
+  };
+
+  try {
+    const response = UrlFetchApp.fetch(url, options);
+    const result = JSON.parse(response.getContentText());
+
+    return result.choices?.[0]?.message?.content.trim() || "";
+  } catch (e) {
+    Logger.log("Error fetching from OpenAI: " + e);
+    return "";
+  }
+}
