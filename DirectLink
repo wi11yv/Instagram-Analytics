@@ -1,0 +1,34 @@
+function generateDirectLinks() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0];
+
+  const fileColIndex = headers.indexOf("File");
+  if (fileColIndex === -1) {
+    Logger.log("No 'File' column found.");
+    return;
+  }
+
+  // Create or get the Direct Link column
+  let directLinkColIndex = headers.indexOf("Direct Link");
+  if (directLinkColIndex === -1) {
+    directLinkColIndex = headers.length;
+    sheet.getRange(1, directLinkColIndex + 1).setValue("Direct Link");
+  }
+
+  for (let i = 1; i < data.length; i++) {
+    const fileUrl = data[i][fileColIndex];
+    if (!fileUrl) continue;
+
+    // Extract File ID
+    const match = fileUrl.match(/[-\w]{25,}/);
+    if (!match) continue;
+
+    const fileId = match[0];
+    const directUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
+
+    sheet.getRange(i + 1, directLinkColIndex + 1).setValue(directUrl);
+  }
+
+  SpreadsheetApp.getUi().alert("Direct links generated!");
+}
