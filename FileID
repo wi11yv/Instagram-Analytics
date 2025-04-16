@@ -1,0 +1,34 @@
+function extractFileIDs() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0];
+
+  const fileColIndex = headers.indexOf("File");
+  if (fileColIndex === -1) {
+    SpreadsheetApp.getUi().alert("No 'File' column found.");
+    return;
+  }
+
+  let fileIdColIndex = headers.indexOf("File ID");
+
+  // If "File ID" column doesn't exist, add it
+  if (fileIdColIndex === -1) {
+    sheet.getRange(1, headers.length + 1).setValue("File ID");
+    fileIdColIndex = headers.length;
+  }
+
+  for (let i = 1; i < data.length; i++) {
+    const fileUrl = data[i][fileColIndex];
+    if (!fileUrl) continue;
+
+    const fileId = extractDriveFileId(fileUrl);
+    if (fileId) {
+      sheet.getRange(i + 1, fileIdColIndex + 1).setValue(fileId);
+    }
+  }
+}
+
+function extractDriveFileId(url) {
+  const match = url.match(/[-\w]{25,}/);
+  return match ? match[0] : null;
+}
