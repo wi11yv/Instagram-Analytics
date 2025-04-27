@@ -1,0 +1,198 @@
+// Replace with your actual OpenAI API key
+const OPENAI_API_KEY = 'KEY'; 
+
+function generateBeyondDopePosts() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  const data = sheet.getDataRange().getValues();
+  const range = sheet.getActiveRange(); // Only the selected cells
+  const selectedCells = range.getValues(); // Get what you selected
+  
+  // CONFIG: set which columns contain context info
+  const NOTES_COLUMN_INDEX = 3; // Column D
+  const FILE_COLUMN_INDEX = 4; // Column E
+  const PREVIEW_COLUMN_INDEX = 5; // Column F
+
+const beyondDopeToneInstructions = `
+You are writing Instagram-style social media posts for a nonprofit called Beyond Dope.
+Tone: Energetic, heartfelt, community-driven, harm-reduction focused, casual yet informative, sometimes playful, sometimes emotional.
+Style: Posts should sound personal and passionate, encourage harm reduction, reference Narcan training, community events, music festivals, and a sense of belonging. Emojis are welcome but not required.
+
+Reference Posts (match tone and vibe):
+
+"Guess whos back?! Everyone needs a little mental health/burnout break sometimes and we are no exception! But the team is ready to jump back into action. Reach out to us for event safety consulting, Narcan training, or to get a team at your event! 
+Song: hjud - watchTHIS! 
+#HarmReduction #DanceMusicCommunity #BeyondDope @festiviz @__________hjud"
+
+"It is the SEVENTH anniversary of our debut event. It's always so inspiring to reflect on how the bass music community came together that day to raise several thousand dollars for local NYC harm reduction orgs, DanceSafe, and MAPS research 💸 
+#HarmReduction #SubstanceAwareness #Fundraising #CommunityBuilding @dancesafe_ @maps__org @festiviz"
+
+"💃 Planning a festival or event? Hit us up. 
+We offer consultations on how to integrate harm reduction into your vibe. 
+Learn more on our website: https://www.bebeyonddope.org/ 
+#PartyWithPurpose #EventSafety #HarmReductionConsulting"
+
+"Submersion NYC 2023! 
+We were honored to come Narcan train the front of house and artist relations teams. Having key staff members at your large event or festival know how to respond to emergencies can keep the whole party safe! 
+#NarcanTraining #Narcan #BeyondDope #FestivalSafety #EventSafety"
+
+"Harm reduction at events is about more than substances. Protect your skin and protect your ears! 
+Our lovely volunteer @rambellefire on the sunscreening 
+#DaytimeRave #BeyondDope #WearSunscreen #SunAwareness"
+
+"Rep your harm reduction knowledge and support our nonprofit work with one of our shirts available on our website (link in bio!) Thanks to @defineeverythingfuture for bringing us out and always supporting harm reduction 💕🛍️ 
+#BeyondMerch #NarcanSavesLives #AddictionAwareness #OverdoseAwareness"
+
+"💻 Online Narcan Trainings! 
+DM us to schedule an online harm reduction training 
+#NarcanTraining #BeyondDope #HarmReduction #OverdoseAwareness"
+
+"Nearly all of us who party can remember a time we did something we now know was extremely risky. One of the MOST important groups to get harm reduction info to is our youngest generation of partiers! We were honored to have been brought to Binghamton University to talk harm reduction and Narcan train some Greek life freshmen 🎓 Reach out if you'd like to schedule an in-person meeting or virtual webinar for your student group! 
+#HarmReduction #NarcanTraining #SafetyAwareness #Binghamton #CollegeParties #PartySafer"
+
+"The National Coalition of Harm Reduction emphasizes the importance of harm reduction initiatives being spearheaded by people within the communities they are servicing. In alignment with our principle of empowerment, we seek to inspire those in our community to foster positive change. Reach out if you are interested in volunteering with us! 
+#Grassroots #CommunityEngagement #VolunteerWork #HarmReduction @festiviz"
+
+"Learn more about Narcan with our online trainings. 
+Schedule one now! bebeyonddope.org 
+#OnlineTraining #NarcanTraining #ModularSynthesis #Narcan"
+
+"All about harm reduction 💗 
+Learn more on our website bebeyonddope.org 
+#OverdoseAwareness #OverdosePrevention #AddictionAwareness #NarcanSavesLives #Throwback"
+
+"Hot Girls Carry Narcan 
+#HarmReduction #HotGirlsCarryNarcan #Addiction"
+
+"Look at all the people we Narcan trained in a year! 
+#BeyondDopeFamily #NarcanTraining #AddictionAwareness #OverdoseAwareness"
+
+"Party responsibly 🔥 
+#BeyondBabes #NarcanTraining #NarcanAwareness #OverdoseAwareness"
+
+"You CAN'T get high off Narcan, you CAN save a life 
+#NarcanSavesLives #NarcanTraining #HarmReductionTips #EndOverdoses @festiviz @yondervillefest"
+
+"🎶 G Jones brought us to Avant Gardner making us the FIRST team to offer these services in that venue! 
+#HarmReductionHistory #GJones #BeyondDope #BassMusic #CommunityBuilding @gjonesbass @secondnaturedj"
+
+"Careful when mixing toys 
+#MixingSubstances #AddictionAwareness #HarmReduction #FunnyDogs"
+
+"🧢👕 Beyond Dope merch is waiting for you! 
+Rock a tee, grab a kit, snag that sticker. Every purchase supports harm reduction and the power of community care. 
+Shop now on our website: https://www.bebeyonddope.org/ 
+#LookGoodDoGood #BeyondDopeStyle"
+
+"🎨 Who remembers these T's? [SOLD OUT🥲] 🔥 
+👕 Get merch on our website! https://www.bebeyonddope.org/shop 
+#BeyondDopeMerch #DIYWithLove #HarmReductionIsCool"
+
+"🕊️ We tabled in Union Square in memory of someone we lost. This movement is personal. 
+#NeverForget #BeyondDopeCommunity"
+
+"✨ The Beyond Dome: A sanctuary in the chaos. 
+Need a break? Overstimulated? Just wanna lay in a hammock and chill? Come find us. 
+Our domes are here for rest, for recovery, for YOU. 
+#ComeAsYouAre #FestivalSanctuary #BeyondDome"
+
+"👂 You can't force people to listen so we don't. No lectures! 
+#NoLectures #BeyondDope #HarmReduction #NarcanAwareness #CommunityBuilding @festiviz @yondervillefest"
+
+"🎪 We roll deep. 
+We supply Narcan, test strips, condoms, stickers, masks, sanitizer, love, and hella vibes! 
+Our booths are stocked with care because you deserve to party safe AND feel seen. 
+Learn more at https://www.bebeyonddope.org/ 
+#HarmReductionInAction #BeyondDope"
+
+"📢 Normalize Narcan! 💜 
+#SubstanceAwareness #Narcan #HarmReductionTraining #AddictionAwareness #EndOverdosing"
+
+"You should always come prepared! 🎆 
+#CarryNarcan #BeyondDope #Fireworks #BassMusic #HarmReductionTips"
+
+"Beyond Dope is back in action baby. 
+Reach out to us for event safety consulting, Narcan training, supplies, or to get a team at your event! 
+Song: BAKEY - UNDER CONTROL 
+#HarmReduction #RaveResponsibly #PartySafely #BeyondDope @festiviz @bakey_____"
+
+"🚌 Yonderville 2021. Dub Bus. Tiedye Ky. Chee. Mindset. Rafeeki. Dice Man. Absolute madness. 
+And we were there reminding everyone you can party hard AND responsibly. 
+#DubLegends #BeyondDopeEnergy"
+
+"Beyond Tips💡💧 
+Stay informed, stay safe, schedule an online training! 
+#OnlineTraining #HarmReductionTips #NasalSprayTips #Narcan #OverdoseAwareness"
+
+"Be Beyond Dope 💜 
+Reach out for safety consulting, Narcan training, supplies or to get a team at your event! 
+#HarmReduction #BeBeyondDope #OverdoseAwareness @festiviz"
+
+"This is my family holding a photo of my brother Michael. He's the reason Beyond Dope exists. 
+Beyond Dope began in memory of Deanna’s brother Michael who we lost to an overdose in 2016."
+
+Always end posts with 2-5 relevant hashtags like: #HarmReduction #NarcanTraining #CommunityCare #DanceMusicCommunity #PartySafer.
+Keep posts 2-5 sentences max.
+No links in the caption (unless directed otherwise).
+`;
+
+
+  const startRow = range.getRow();       // First selected row
+  const startColumn = range.getColumn(); // First selected column
+
+  for (let i = 0; i < selectedCells.length; i++) {
+    const cellRowOffset = i;
+    const cellValue = selectedCells[i][0]; // Only one column selected typically
+
+    if (cellValue) continue; // Skip if already filled
+
+    const dataRow = startRow + cellRowOffset - 1; // Adjust for 0-indexed array
+
+    const notesData = data[dataRow][NOTES_COLUMN_INDEX];
+    const fileData = data[dataRow][FILE_COLUMN_INDEX];
+    const previewData = data[dataRow][PREVIEW_COLUMN_INDEX];
+
+    const prompt = `
+${beyondDopeToneInstructions}
+
+Context to help you write:
+- Notes: ${notesData}
+- File Name (use only if relevant to context): ${fileData}
+- Image Preview/Description: ${previewData}
+
+Write a social media post based on the above.
+`;
+
+    const payload = {
+      model: 'gpt-4-1106-preview',
+      messages: [
+        { role: 'system', content: 'You are a social media copywriter for a harm reduction nonprofit called Beyond Dope.' },
+        { role: 'user', content: prompt }
+      ],
+      temperature: 0.7,
+      max_tokens: 300
+    };
+
+    const options = {
+      method: 'post',
+      contentType: 'application/json',
+      headers: {
+        Authorization: `Bearer ${OPENAI_API_KEY}`,
+      },
+      payload: JSON.stringify(payload)
+    };
+
+    try {
+      const response = UrlFetchApp.fetch('https://api.openai.com/v1/chat/completions', options);
+      const json = JSON.parse(response.getContentText());
+      const generatedPost = json.choices[0].message.content.trim();
+
+      // Write into the originally selected cell
+      sheet.getRange(startRow + cellRowOffset, startColumn).setValue(generatedPost);
+      SpreadsheetApp.flush(); // Update sheet immediately
+
+      Utilities.sleep(1200); // Wait to avoid rate limits
+    } catch (error) {
+      Logger.log('Error at row ' + (startRow + cellRowOffset) + ': ' + error);
+    }
+  }
+}
