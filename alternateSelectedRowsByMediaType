@@ -1,0 +1,28 @@
+function alternatePhotoVideoOrder() {
+  const sheet = SpreadsheetApp.getActiveSheet();
+  const selection = sheet.getActiveRange();
+  const values = selection.getValues();
+  const startRow = selection.getRow();
+  const startCol = selection.getColumn();
+
+  let photos = [];
+  let videos = [];
+
+  for (let i = 0; i < values.length; i++) {
+    const label = values[i][0].toString().toLowerCase();
+
+    if (label.includes('photo')) {
+      photos.push(values[i]);
+    } else if (label.includes('video')) {
+      videos.push(values[i]);
+    }
+  }
+
+  const reordered = [];
+  while (photos.length || videos.length) {
+    if (photos.length) reordered.push(photos.shift());
+    if (videos.length) reordered.push(videos.shift());
+  }
+
+  sheet.getRange(startRow, startCol, reordered.length, reordered[0].length).setValues(reordered);
+}
