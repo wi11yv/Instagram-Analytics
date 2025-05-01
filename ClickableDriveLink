@@ -1,0 +1,28 @@
+function generateClickablePreviewChips() {
+  const sheet = SpreadsheetApp.getActiveSheet();
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return; // skip if no data
+
+  const fileValues = sheet.getRange(2, 4, lastRow - 1, 1).getValues(); // Column D (files)
+  const previewLinks = [];
+
+  for (let i = 0; i < fileValues.length; i++) {
+    const cellValue = fileValues[i][0];
+
+    if (typeof cellValue !== "string") {
+      previewLinks.push([""]);
+      continue;
+    }
+
+    const match = cellValue.match(/\/d\/([a-zA-Z0-9_-]{10,})/);
+    if (match) {
+      const fileId = match[1];
+      const url = `https://drive.google.com/file/d/${fileId}/view`;
+      previewLinks.push([`=HYPERLINK("${url}", "🔗 Preview")`]);
+    } else {
+      previewLinks.push([""]);
+    }
+  }
+
+  sheet.getRange(2, 5, previewLinks.length, 1).setFormulas(previewLinks); // Column E
+}
