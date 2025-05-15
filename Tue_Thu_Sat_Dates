@@ -1,0 +1,24 @@
+function listTuThSa() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  sheet.clear();  // Clear existing content
+
+  const startDate = new Date();  // Today
+  const endDate = new Date('2026-12-31');  // End of 2026
+
+  const dayLabels = {
+    2: 'Tu',
+    4: 'Th',
+    6: 'Sa'
+  };
+
+  let row = 1;
+  for (let date = new Date(startDate); date <= endDate; date.setDate(date.getDate() + 1)) {
+    const day = date.getDay();
+    if (day === 2 || day === 4 || day === 6) {  // Tu=2, Th=4, Sa=6
+      const label = dayLabels[day];
+      const formatted = `${label} ${date.getMonth() + 1}/${date.getDate()} 9am`;
+      sheet.getRange(row, 1).setValue(formatted);
+      row++;
+    }
+  }
+}
