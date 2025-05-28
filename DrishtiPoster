@@ -1,0 +1,113 @@
+const OPENAI_API_KEY = 'KEYKEYKEY';
+
+/**
+ * Generates social posts for each row.
+ * @param {boolean} ignoreFilenameContext - if true, skips including 'Name' when it looks like a filename.
+ */
+function generatePosts(ignoreFilenameContext = true) {
+  const sheet    = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  const data     = sheet.getDataRange().getValues();
+  const headers  = data[0];
+  const folderCol   = headers.indexOf("Folder");
+  const nameCol     = headers.indexOf("Name");
+  const categoryCol = headers.indexOf("Category");
+  const tagsCol     = headers.indexOf("Tags");
+  const postCol     = headers.indexOf("Post");
+
+  if (folderCol < 0 || categoryCol < 0 || postCol < 0) {
+    throw new Error("Sheet must have 'Folder', 'Category', and 'Post' columns.");
+  }
+
+  for (let i = 1; i < data.length; i++) {
+    const folderRaw   = data[i][folderCol];
+    const nameRaw     = nameCol    >= 0 ? data[i][nameCol]     : '';
+    const categoryRaw = data[i][categoryCol];
+    const tagsRaw     = tagsCol    >= 0 ? data[i][tagsCol]     : '';
+
+    if (!folderRaw || !categoryRaw) continue;
+
+    // skip obvious filenames
+    const isFilename = ignoreFilenameContext &&
+      typeof nameRaw === 'string' &&
+      /\.(jpe?g|png|gif|mp4|mov|avi|mp3|wav|pdf|docx?)$/i.test(nameRaw.trim());
+
+    const folder   = folderRaw.toString().trim();
+    const name     = isFilename ? '' : nameRaw.toString().trim();
+    const category = categoryRaw.toString().trim();
+    const tags     = tagsRaw.toString().trim();
+
+    // build prompt context
+    const contextLines = [
+      `- Folder: "${folder}"`,
+      name     ? `- Name:     "${name}"`     : null,
+      `- Category: "${category}"`,
+      tags     ? `- Tags:     "${tags}"`     : null
+    ].filter(Boolean).join('\n');
+
+    const prompt = `
+Generate a VERY terse social media caption using:
+${contextLines}
+
+Instructions:
+- Line 1: catchy hook + 2–4 emojis
+- Line 2: call to action
+- Line 3: exactly 3 hashtags (one large-reach, one medium-reach, one small-reach), space-separated
+- Do NOT output your own Tags or context; only those three lines
+`;
+
+    const response = callGPT4o(prompt);
+    if (!response) continue;
+
+    // split raw AI output on single newlines, trim, and drop empty
+    const lines = response
+      .trim()
+      .replace(/\r/g, '')
+      .split('\n')
+      .map(s => s.trim())
+      .filter(Boolean);
+
+    const catchyOne    = lines[0] || '';
+    const callToAction = lines[1] || '';
+    const hashtagLine  = lines[2] || '';
+
+    // final line = tags-column data + AI hashtags
+    const lastLine = tags
+      ? `${tags} ${hashtagLine}`.trim()
+      : hashtagLine;
+
+    // assemble with blank lines between
+    const finalPost = `${catchyOne}\n\n${callToAction}\n\n${lastLine}`;
+
+    sheet.getRange(i + 1, postCol + 1).setValue(finalPost);
+  }
+}
+
+/**
+ * Calls OpenAI's chat completion endpoint and returns the assistant's reply.
+ */
+function callGPT4o(prompt) {
+  const url = 'https://api.openai.com/v1/chat/completions';
+  const payload = {
+    model: 'gpt-4o',
+    messages: [{ role: 'user', content: prompt }],
+    temperature: 0.9,
+    max_tokens: 100,
+  };
+
+  const options = {
+    method:      'post',
+    contentType: 'application/json',
+    headers:     { Authorization: `Bearer ${OPENAI_API_KEY}` },
+    payload:     JSON.stringify(payload),
+    muteHttpExceptions: true,
+  };
+
+  const response = UrlFetchApp.fetch(url, options);
+  const json     = JSON.parse(response.getContentText());
+  if (json.choices && json.choices.length) {
+    return json.choices[0].message.content;
+  } else {
+    Logger.log("OpenAI API error: " + response.getContentText());
+    return null;
+  }
+}
